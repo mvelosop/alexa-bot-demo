@@ -5,13 +5,16 @@
 
 using AlexaBotDemo.Adapters;
 using AlexaBotDemo.Bots;
+using AlexaBotDemo.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
 
 namespace AlexaBotDemo
 {
@@ -27,10 +30,25 @@ namespace AlexaBotDemo
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
             // Create the Bot Framework Adapter with error handling enabled.
-            services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
+            services.AddSingleton<IAdapterIntegration, BotAdapterWithErrorHandler>();
+            services.AddSingleton<IBotFrameworkHttpAdapter, AlexaAdapterWithErrorHandler>();
+
+            services.AddSingleton(sp =>
+            {
+                var environment = sp.GetRequiredService<IHostingEnvironment>();
+                var logFolder = Path.GetFullPath(Path.Combine(environment.ContentRootPath, $"../../object-logs/"));
+
+                return new ObjectLogger(logFolder);
+            });
+
+            services.AddSingleton<IStorage, MemoryStorage>();
+            services.AddSingleton<UserState>();
+            services.AddSingleton<BotStateAccessors>();
+
+            services.AddSingleton<BotConversation>();
 
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
             services.AddTransient<IBot, AlexaBot>();

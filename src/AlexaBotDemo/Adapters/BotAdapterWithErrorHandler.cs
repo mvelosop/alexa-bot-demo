@@ -10,9 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace AlexaBotDemo.Adapters
 {
-    public class AdapterWithErrorHandler : BotFrameworkHttpAdapter
+    public class BotAdapterWithErrorHandler : BotFrameworkHttpAdapter
     {
-        public AdapterWithErrorHandler(IConfiguration configuration, ILogger<BotFrameworkHttpAdapter> logger)
+        public BotAdapterWithErrorHandler(IConfiguration configuration, ILogger<BotFrameworkHttpAdapter> logger)
             : base(configuration, logger)
         {
             OnTurnError = async (turnContext, exception) =>

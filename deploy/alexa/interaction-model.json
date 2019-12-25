@@ -1,0 +1,63 @@
+{
+  "interactionModel": {
+      "languageModel": {
+          "invocationName": "demo bot",
+          "intents": [
+              {
+                  "name": "GetUserIntent",
+                  "slots": [
+                      {
+                          "name": "phrase",
+                          "type": "phrase"
+                      }
+                  ],
+                  "samples": [
+                      "{phrase}"
+                  ]
+              },
+              {
+                  "name": "AMAZON.FallbackIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.NavigateHomeIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.CancelIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.HelpIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.StopIntent",
+                  "samples": []
+              }
+          ],
+          "types": [
+              {
+                  "name": "phrase",
+                  "values": [
+                      {
+                          "name": {
+                              "value": "hola Alexa"
+                          }
+                      },
+                      {
+                          "name": {
+                              "value": "vas a repetir todo lo que diga verdad"
+                          }
+                      },
+                      {
+                          "name": {
+                              "value": "de qué color es el cielo?"
+                          }
+                      }
+                  ]
+              }
+          ]
+      }
+  }
+}
