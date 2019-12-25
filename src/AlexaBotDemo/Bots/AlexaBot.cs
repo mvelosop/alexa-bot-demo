@@ -60,7 +60,7 @@ namespace AlexaBotDemo.Bots
                     return;
 
                 case "StopIntent":
-                    await turnContext.SendActivityAsync(MessageFactory.Text("Terminando la sesión", inputHint: InputHints.IgnoringInput));
+                    await turnContext.SendActivityAsync(MessageFactory.Text("Terminando la sesiÃ³n", inputHint: InputHints.IgnoringInput));
                     return;
             }
 
@@ -121,8 +121,8 @@ namespace AlexaBotDemo.Bots
         {
             var time = DateTime.Now.TimeOfDay.Hours;
 
-            if (time < 14) return "buenos días";
-            if (time <= 20) return "buenos tardes";
+            if (time < 14) return "buenos dÃ­as";
+            if (time <= 20) return "buenas tardes";
             return "buenas noches";
         }
 
@@ -133,9 +133,9 @@ namespace AlexaBotDemo.Bots
             var message = turnContext.Activity.Text.ToLower();
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
 
-            if (message == "adiós")
+            if (message == "adiÃ³s")
             {
-                await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}! {GetGoodbyeMessage()}."), cancellationToken);
+                await turnContext.SendActivityAsync(MessageFactory.Text($"AdiÃ³s {alexaConversation.UserName}! {GetGoodbyeMessage()}."), cancellationToken);
 
                 alexaConversation.UserName = null;
                 await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
@@ -152,11 +152,11 @@ namespace AlexaBotDemo.Bots
                 alexaConversation.UserName = message;
                 await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
-                replyMessage = $"Gracias {message}, ahora sí voy a repetir lo próximo que digas.";
+                replyMessage = $"Gracias {message}, ahora sÃ­ voy a repetir lo prÃ³ximo que digas.";
             }
             else
             {
-                replyMessage = $"{alexaConversation.UserName}, entendí, {message}";
+                replyMessage = $"{alexaConversation.UserName}, entendÃ­, {message}";
             }
 
             await turnContext.SendActivityAsync(MessageFactory.Text(replyMessage, inputHint: InputHints.ExpectingInput), cancellationToken);
