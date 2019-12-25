@@ -8,8 +8,6 @@ using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,7 +49,7 @@ namespace AlexaBotDemo.Bots
 
         protected override async Task OnEventActivityAsync(ITurnContext<IEventActivity> turnContext, CancellationToken cancellationToken)
         {
-            await EchoBackToBotFramework(turnContext);
+            await EchoBackToMonitorBot(turnContext);
 
             switch (turnContext.Activity.Name)
             {
@@ -68,74 +66,16 @@ namespace AlexaBotDemo.Bots
                 $"Event received. Channel: {turnContext.Activity.ChannelId}, Name: {turnContext.Activity.Name}");
         }
 
-        protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
-        {
-            foreach (var member in membersAdded)
-            {
-                if (member.Id != turnContext.Activity.Recipient.Id)
-                {
-                    await turnContext.SendActivityAsync(MessageFactory.Text($"Hello world - From AlexaBotDemo! (channel: {turnContext.Activity.ChannelId})"), cancellationToken);
-                }
-            }
-        }
-
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
-            if (turnContext.Activity.ChannelId == "alexa")
-            {
-                await HandleAlexaMessageAsync(turnContext, cancellationToken);
-            }
-            else
-            {
-                await HandleBotServiceMessageAsync(turnContext, cancellationToken);
-            }
-        }
-
-        private async Task EchoBackToBotFramework(ITurnContext<IEventActivity> turnContext)
-        {
-            if (_conversation.Reference == null) return;
-
-            var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
-
-            var eventValue = JsonConvert.SerializeObject(turnContext.Activity.Value, Formatting.Indented);
-
-            await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
-            {
-                await context.SendActivityAsync($"Event received:\n```\n{eventValue}\n```");
-            });
-        }
-
-        private async Task EchoBackToBotFramework(ITurnContext<IMessageActivity> turnContext)
-        {
-            if (_conversation.Reference == null) return;
-
-            var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
-
-            await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
-            {
-                await context.SendActivityAsync($"Message received ({turnContext.Activity.Locale}):\n**{turnContext.Activity.Text}**");
-            });
-        }
-
-        private string GetGoodbyeMessage()
-        {
-            var time = DateTime.Now.TimeOfDay.Hours;
-
-            if (time < 14) return "buenos días";
-            if (time <= 20) return "buenas tardes";
-            return "buenas noches";
-        }
-
-        private async Task HandleAlexaMessageAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
-        {
-            await EchoBackToBotFramework(turnContext);
+            await EchoBackToMonitorBot(turnContext);
 
             var message = turnContext.Activity.Text.ToLower();
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
 
             if (message == "adiós")
             {
-                await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}! {GetGoodbyeMessage()}."), cancellationToken);
+                await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}!"), cancellationToken);
 
                 alexaConversation.UserName = null;
                 await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
@@ -162,21 +102,30 @@ namespace AlexaBotDemo.Bots
             await turnContext.SendActivityAsync(MessageFactory.Text(replyMessage, inputHint: InputHints.ExpectingInput), cancellationToken);
         }
 
-        private async Task HandleBotServiceMessageAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        private async Task EchoBackToMonitorBot(ITurnContext<IEventActivity> turnContext)
         {
-            var message = turnContext.Activity.Text?.ToLower();
+            if (_conversation.Reference == null) return;
 
-            switch (message ?? "")
+            var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
+
+            var eventValue = JsonConvert.SerializeObject(turnContext.Activity.Value, Formatting.Indented);
+
+            await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
             {
-                case "monitor alexa":
-                    // Save the conversation reference when the message doesn't come from Alexa
-                    _conversation.Reference = turnContext.Activity.GetConversationReference();
-                    await turnContext.SendActivityAsync($@"Alexa monitor is on");
+                await context.SendActivityAsync($"Event received:\n```\n{eventValue}\n```");
+            });
+        }
 
-                    return;
-            }
+        private async Task EchoBackToMonitorBot(ITurnContext<IMessageActivity> turnContext)
+        {
+            if (_conversation.Reference == null) return;
 
-            await turnContext.SendActivityAsync($"Echo from AlexaBotDemo: \"**{turnContext.Activity.Text}**\"");
+            var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
+
+            await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
+            {
+                await context.SendActivityAsync($"Message received ({turnContext.Activity.Locale}):\n**{turnContext.Activity.Text}**");
+            });
         }
 
         private async Task HandleLaunchRequestAsync(ITurnContext<IEventActivity> turnContext, CancellationToken cancellationToken)
