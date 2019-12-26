@@ -55,7 +55,6 @@ namespace AlexaBotDemo.Bots
             switch (message ?? "")
             {
                 case "monitor alexa":
-                    // Save the conversation reference when the message doesn't come from Alexa
                     _conversation.Reference = turnContext.Activity.GetConversationReference();
                     await turnContext.SendActivityAsync($@"Alexa monitor is on");
 
