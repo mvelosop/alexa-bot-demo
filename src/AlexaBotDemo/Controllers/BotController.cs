@@ -6,6 +6,7 @@
 using AlexaBotDemo.Bots;
 using AlexaBotDemo.Infrastructure;
 using Bot.Builder.Community.Adapters.Alexa;
+using Bot.Builder.Community.Adapters.Alexa.Integration.AspNet.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;

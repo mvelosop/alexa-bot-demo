@@ -3,11 +3,13 @@
 
 using AlexaBotDemo.Infrastructure;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.AI.QnA;
 using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +30,8 @@ namespace AlexaBotDemo.Bots
             IAdapterIntegration botAdapter,
             IConfiguration configuration,
             BotStateAccessors accessors,
-            ILogger<AlexaBot> logger)
+            ILogger<AlexaBot> logger,
+            QnAMakerEndpoint endpoint)
         {
             _objectLogger = objectLogger;
             _conversation = conversation;
@@ -36,7 +39,11 @@ namespace AlexaBotDemo.Bots
             _configuration = configuration;
             _accessors = accessors;
             _logger = logger;
+
+            AlexaBotQnA = new QnAMaker(endpoint);
         }
+
+        public QnAMaker AlexaBotQnA { get; private set; }
 
         public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
         {
@@ -73,6 +80,8 @@ namespace AlexaBotDemo.Bots
             var message = turnContext.Activity.Text.ToLower();
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
 
+            _logger.LogInformation(@"----- Retrieved alexaConversation ({@AlexaConversation})", alexaConversation);
+
             if (message == "adiós")
             {
                 await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}!"), cancellationToken);
@@ -85,8 +94,6 @@ namespace AlexaBotDemo.Bots
 
             var replyMessage = string.Empty;
 
-            _logger.LogInformation(@"----- Retrieved alexaConversation ({@AlexaConversation})", alexaConversation);
-
             if (alexaConversation.UserName is null)
             {
                 alexaConversation.UserName = message;
@@ -96,7 +103,7 @@ namespace AlexaBotDemo.Bots
             }
             else
             {
-                replyMessage = $"{alexaConversation.UserName}, entendí, {message}";
+                replyMessage = await FindAnswerAsync(turnContext, cancellationToken);
             }
 
             await turnContext.SendActivityAsync(MessageFactory.Text(replyMessage, inputHint: InputHints.ExpectingInput), cancellationToken);
@@ -126,6 +133,20 @@ namespace AlexaBotDemo.Bots
             {
                 await context.SendActivityAsync($"Message received ({turnContext.Activity.Locale}):\n**{turnContext.Activity.Text}**");
             });
+        }
+
+        private async Task<string> FindAnswerAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
+        {
+            var results = await AlexaBotQnA.GetAnswersAsync(turnContext);
+
+            if (results.Length == 0)
+            {
+                var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
+
+                return $"Perdona {alexaConversation.UserName}, pero no tengo idea, prueba preguntarme otra cosa.";
+            }
+
+            return results.First().Answer;
         }
 
         private async Task HandleLaunchRequestAsync(ITurnContext<IEventActivity> turnContext, CancellationToken cancellationToken)

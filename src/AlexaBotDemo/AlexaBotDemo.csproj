@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Bot.Builder.Community.Adapters.Alexa" Version="4.6.4-beta0016" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Bot.Builder.AI.QnA" Version="4.7.0" />
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.7.0" />
     <PackageReference Include="Serilog" Version="2.9.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />

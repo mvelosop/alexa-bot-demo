@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.AI.QnA;
 using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.Configuration;
@@ -53,6 +54,14 @@ namespace AlexaBotDemo
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
             services.AddTransient<AlexaBot>();
             services.AddTransient<MonitorBot>();
+
+            // Create QnAMaker endpoint as a singleton
+            services.AddSingleton(new QnAMakerEndpoint
+            {
+                KnowledgeBaseId = Configuration.GetValue<string>("QnAKnowledgebaseId"),
+                EndpointKey = Configuration.GetValue<string>("QnAAuthKey"),
+                Host = Configuration.GetValue<string>("QnAEndpointHostName")
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
