@@ -1,10 +1,10 @@
 # alexa-bot-demo
 
-Alexa and Bot Framework integration demo
+Alexa and Azure integration demo with Bot Framework.
 
 ## Overview
 
-- Get voice input from Echo device, through Alexa service and process it in a Bot Framework bot, to access QnA service in Azure.
+- Get voice input from Echo device through Alexa service, and process it in a Bot Framework bot, to access QnA service in Azure.
 - Monitor the Alexa conversation through a separate Skype bot.
 
 ## General diagram

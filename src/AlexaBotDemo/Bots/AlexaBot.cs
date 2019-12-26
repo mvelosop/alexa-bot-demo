@@ -96,8 +96,8 @@ namespace AlexaBotDemo.Bots
             {
                 await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}!"), cancellationToken);
 
-                // Reset user name for next interaction
-                alexaConversation.UserName = null;
+                // Reset conversation for next interaction
+                alexaConversation = new AlexaConversation();
                 await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
                 return;
@@ -143,7 +143,7 @@ namespace AlexaBotDemo.Bots
 
             await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
             {
-                await context.SendActivityAsync($"Bot said:\n**{message}**");
+                await context.SendActivityAsync($"Bot said:\n*{message}*");
             });
         }
 
