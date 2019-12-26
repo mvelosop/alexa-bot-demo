@@ -97,14 +97,25 @@ namespace AlexaBotDemo.Bots
             if (alexaConversation.UserName is null)
             {
                 alexaConversation.UserName = message;
-                await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
-                replyMessage = $"Gracias {message}, ahora sí voy a repetir lo próximo que digas.";
+                replyMessage = $"Gracias {message}, ahora sí voy a repetir lo que digas.";
+            }
+            else if (alexaConversation.TurnControl < 0)
+            {
+                replyMessage = $"{alexaConversation.UserName}, dijiste {turnContext.Activity.Text}";
+            }
+            else if (alexaConversation.TurnControl == 0)
+            {
+                replyMessage = $"A ver {alexaConversation.UserName}, esto está un poco aburrido, mejor hazme preguntas";
             }
             else
             {
                 replyMessage = await FindAnswerAsync(turnContext, cancellationToken);
             }
+
+            alexaConversation.TurnControl++;
+
+            await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
             await turnContext.SendActivityAsync(MessageFactory.Text(replyMessage, inputHint: InputHints.ExpectingInput), cancellationToken);
         }
@@ -154,7 +165,7 @@ namespace AlexaBotDemo.Bots
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
 
             var greetingMessage = string.IsNullOrEmpty(alexaConversation.UserName)
-                ? $"Hola, voy a repetir todo lo que digas, para empezar, por favor, dime tu nombre"
+                ? $"Hola, soy un demo de Alexa con Bot Framework y voy a repetir todo lo que digas, para empezar, por favor, dime tu nombre"
                 : $@"Hola {alexaConversation.UserName}, seguimos con el mismo juego, dime cualquier cosa para repetirla";
 
             await turnContext.SendActivityAsync(MessageFactory.Text(greetingMessage, inputHint: InputHints.ExpectingInput));
