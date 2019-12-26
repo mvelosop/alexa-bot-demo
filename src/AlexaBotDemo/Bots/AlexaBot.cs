@@ -25,21 +25,26 @@ namespace AlexaBotDemo.Bots
         private readonly ObjectLogger _objectLogger;
 
         public AlexaBot(
-            ObjectLogger objectLogger,
-            BotConversation conversation,
-            IAdapterIntegration botAdapter,
-            IConfiguration configuration,
-            BotStateAccessors accessors,
             ILogger<AlexaBot> logger,
+            ObjectLogger objectLogger,
+            IConfiguration configuration,
+            IAdapterIntegration botAdapter,
+            BotConversation conversation,
+            BotStateAccessors accessors,
             QnAMakerEndpoint endpoint)
         {
-            _objectLogger = objectLogger;
-            _conversation = conversation;
-            _botAdapter = botAdapter;
-            _configuration = configuration;
-            _accessors = accessors;
             _logger = logger;
+            _objectLogger = objectLogger;
+            _configuration = configuration;
 
+            // ** Bot adapter (to send proactive message)
+            _botAdapter = botAdapter;
+
+            // ** Bot state handling
+            _conversation = conversation;
+            _accessors = accessors;
+
+            // ** QnA endpoint
             AlexaBotQnA = new QnAMaker(endpoint);
         }
 
@@ -51,12 +56,14 @@ namespace AlexaBotDemo.Bots
 
             await base.OnTurnAsync(turnContext, cancellationToken);
 
+            // ** Save bot state changes
             await _accessors.SaveChangesAsync(turnContext);
         }
 
         protected override async Task OnEventActivityAsync(ITurnContext<IEventActivity> turnContext, CancellationToken cancellationToken)
         {
-            await EchoBackToMonitorBot(turnContext);
+            // ** Echo event information to monitor bot
+            await EchoEventAsync(turnContext);
 
             switch (turnContext.Activity.Name)
             {
@@ -69,23 +76,27 @@ namespace AlexaBotDemo.Bots
                     return;
             }
 
+            // ** Speak back any other event
             await turnContext.SendActivityAsync(
-                $"Event received. Channel: {turnContext.Activity.ChannelId}, Name: {turnContext.Activity.Name}");
+                $"Event received: {turnContext.Activity.Name}");
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
-            await EchoBackToMonitorBot(turnContext);
+            // ** Echo user message to monitor
+            await EchoUserMessageAsync(turnContext);
 
             var message = turnContext.Activity.Text.ToLower();
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
 
             _logger.LogInformation(@"----- Retrieved alexaConversation ({@AlexaConversation})", alexaConversation);
 
+            // ** Handle goodbye message
             if (message == "adiós")
             {
                 await turnContext.SendActivityAsync(MessageFactory.Text($"Adiós {alexaConversation.UserName}!"), cancellationToken);
 
+                // Reset user name for next interaction
                 alexaConversation.UserName = null;
                 await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
@@ -106,10 +117,11 @@ namespace AlexaBotDemo.Bots
             }
             else if (alexaConversation.TurnControl == 0)
             {
-                replyMessage = $"A ver {alexaConversation.UserName}, esto está un poco aburrido, mejor hazme preguntas";
+                replyMessage = $"A ver {alexaConversation.UserName}, esto está un poco aburrido, mejor hazme preguntas.";
             }
             else
             {
+                // ** Search QnA service
                 replyMessage = await FindAnswerAsync(turnContext, cancellationToken);
             }
 
@@ -117,24 +129,40 @@ namespace AlexaBotDemo.Bots
 
             await _accessors.AlexaConversation.SetAsync(turnContext, alexaConversation);
 
+            await EchoBotMessageAsync(turnContext, replyMessage);
+
+            // ** Speak back reply message
             await turnContext.SendActivityAsync(MessageFactory.Text(replyMessage, inputHint: InputHints.ExpectingInput), cancellationToken);
         }
 
-        private async Task EchoBackToMonitorBot(ITurnContext<IEventActivity> turnContext)
+        private async Task EchoBotMessageAsync(ITurnContext<IMessageActivity> turnContext, string message)
         {
             if (_conversation.Reference == null) return;
 
             var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
 
-            var eventValue = JsonConvert.SerializeObject(turnContext.Activity.Value, Formatting.Indented);
+            await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
+            {
+                await context.SendActivityAsync($"Bot said:\n**{message}**");
+            });
+        }
 
+        private async Task EchoEventAsync(ITurnContext<IEventActivity> turnContext)
+        {
+            // ** Nothing to do if no conversation reference
+            if (_conversation.Reference == null) return;
+
+            var eventValue = JsonConvert.SerializeObject(turnContext.Activity.Value, Formatting.Indented);
+            var botAppId = string.IsNullOrEmpty(_configuration["MicrosoftAppId"]) ? "*" : _configuration["MicrosoftAppId"];
+
+            // ** Send proactive message
             await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
             {
                 await context.SendActivityAsync($"Event received:\n```\n{eventValue}\n```");
             });
         }
 
-        private async Task EchoBackToMonitorBot(ITurnContext<IMessageActivity> turnContext)
+        private async Task EchoUserMessageAsync(ITurnContext<IMessageActivity> turnContext)
         {
             if (_conversation.Reference == null) return;
 
@@ -142,7 +170,7 @@ namespace AlexaBotDemo.Bots
 
             await _botAdapter.ContinueConversationAsync(botAppId, _conversation.Reference, async (context, token) =>
             {
-                await context.SendActivityAsync($"Message received ({turnContext.Activity.Locale}):\n**{turnContext.Activity.Text}**");
+                await context.SendActivityAsync($"User said ({turnContext.Activity.Locale}):\n**{turnContext.Activity.Text}**");
             });
         }
 
@@ -162,11 +190,15 @@ namespace AlexaBotDemo.Bots
 
         private async Task HandleLaunchRequestAsync(ITurnContext<IEventActivity> turnContext, CancellationToken cancellationToken)
         {
+            // ** Set up welcome (back) message
             var alexaConversation = await _accessors.AlexaConversation.GetAsync(turnContext, () => new AlexaConversation());
+            var game = alexaConversation.TurnControl >= 0
+                ? "Ahora estamos jugando a que tú me haces preguntas."
+                : "seguimos con el mismo juego, dime cualquier cosa para repetirla.";
 
             var greetingMessage = string.IsNullOrEmpty(alexaConversation.UserName)
                 ? $"Hola, soy un demo de Alexa con Bot Framework y voy a repetir todo lo que digas, para empezar, por favor, dime tu nombre"
-                : $@"Hola {alexaConversation.UserName}, seguimos con el mismo juego, dime cualquier cosa para repetirla";
+                : $@"Hola {alexaConversation.UserName}, {game}";
 
             await turnContext.SendActivityAsync(MessageFactory.Text(greetingMessage, inputHint: InputHints.ExpectingInput));
         }

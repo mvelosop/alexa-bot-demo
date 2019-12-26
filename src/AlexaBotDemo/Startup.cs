@@ -33,10 +33,11 @@ namespace AlexaBotDemo
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            // Create the Bot Framework Adapter with error handling enabled.
+            // Bot adapters
             services.AddSingleton<IAdapterIntegration, BotAdapterWithErrorHandler>();
             services.AddSingleton<IBotFrameworkHttpAdapter, AlexaAdapterWithErrorHandler>();
 
+            // Object logger
             services.AddSingleton(sp =>
             {
                 var environment = sp.GetRequiredService<IHostingEnvironment>();
@@ -45,17 +46,18 @@ namespace AlexaBotDemo
                 return new ObjectLogger(logFolder);
             });
 
+            // Bot state
             services.AddSingleton<IStorage, MemoryStorage>();
             services.AddSingleton<UserState>();
             services.AddSingleton<BotStateAccessors>();
-
+            // Conversation reference temporal store
             services.AddSingleton<BotConversation>();
 
-            // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
+            // Bots.
             services.AddTransient<AlexaBot>();
             services.AddTransient<MonitorBot>();
 
-            // Create QnAMaker endpoint as a singleton
+            // QnAMaker endpoint
             services.AddSingleton(new QnAMakerEndpoint
             {
                 KnowledgeBaseId = Configuration.GetValue<string>("QnAKnowledgebaseId"),

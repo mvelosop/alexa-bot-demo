@@ -14,27 +14,20 @@ namespace AlexaBotDemo.Bots
     {
         private readonly ObjectLogger _objectLogger;
         private readonly BotConversation _conversation;
-        private readonly IAdapterIntegration _botAdapter;
-        private readonly BotStateAccessors _accessors;
 
         public MonitorBot(
             ObjectLogger objectLogger,
-            BotConversation conversation,
-            IAdapterIntegration botAdapter,
-            BotStateAccessors accessors)
+            BotConversation conversation)
         {
             _objectLogger = objectLogger;
             _conversation = conversation;
-            _botAdapter = botAdapter;
-            _accessors = accessors;
         }
+
         public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
         {
             await _objectLogger.LogObjectAsync(turnContext.Activity, turnContext.Activity.Id);
 
             await base.OnTurnAsync(turnContext, cancellationToken);
-
-            await _accessors.SaveChangesAsync(turnContext);
         }
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
@@ -55,6 +48,8 @@ namespace AlexaBotDemo.Bots
             switch (message ?? "")
             {
                 case "monitor alexa":
+
+                    // ** Save conversation reference to send proactive messages
                     _conversation.Reference = turnContext.Activity.GetConversationReference();
                     await turnContext.SendActivityAsync($@"Alexa monitor is on");
 
